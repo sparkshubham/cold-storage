@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -36,7 +36,7 @@ function StorageFields({
   setForm,
 }: {
   form: Record<string, string | number>;
-  setForm: (next: Record<string, string | number>) => void;
+  setForm: Dispatch<SetStateAction<Record<string, string | number>>>;
 }) {
   const { data: customers } = useQuery({ queryKey: ['customers', 'options'], queryFn: () => listResource('/customers', { limit: 100 }) });
   const { data: products } = useQuery({ queryKey: ['products', 'options'], queryFn: () => listResource('/products', { limit: 100 }) });
@@ -119,7 +119,7 @@ export function InventoryPage() {
   const { hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<'opening' | 'adjustment' | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<Record<string, string | number>>(emptyForm);
   const { data } = useQuery({ queryKey: ['inventory'], queryFn: () => listResource('/inventory', { limit: 50 }) });
   const save = useMutation({
     mutationFn: () =>
@@ -203,7 +203,7 @@ export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
   const { hasPermission } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ ...emptyForm, vehicleNumber: '' });
+  const [form, setForm] = useState<Record<string, string | number>>({ ...emptyForm, vehicleNumber: '' });
   const path = kind === 'inward' ? '/inwards' : '/outwards';
   const { data } = useQuery({ queryKey: [kind], queryFn: () => listResource(path, { limit: 50 }) });
   const save = useMutation({
