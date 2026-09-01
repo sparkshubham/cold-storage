@@ -1,11 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, MenuItem, Paper, Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { MenuItem, Paper, Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
 import { listSubscriptions, updateSubscriptionStatus } from '../api/saas';
+import { ListSearch, TablePager } from '../components/ListControls';
 import { PageHeader, StatusChip } from '../components/PageHeader';
+import { usePagedList } from '../hooks/usePagedList';
 
 export function SubscriptionsPage() {
   const queryClient = useQueryClient();
-  const { data } = useQuery({ queryKey: ['subscriptions'], queryFn: () => listSubscriptions({ limit: 50 }) });
+  const list = usePagedList(['subscriptions'], (params) => listSubscriptions(params));
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => updateSubscriptionStatus(id, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscriptions'] }),
@@ -14,6 +16,7 @@ export function SubscriptionsPage() {
   return (
     <>
       <PageHeader title="Subscriptions" subtitle="Tenant subscription status, dates, and amounts" />
+      <ListSearch value={list.searchInput} onChange={list.setSearchInput} onSubmit={list.applySearch} />
       <Paper>
         <Table>
           <TableHead>
@@ -26,7 +29,7 @@ export function SubscriptionsPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {(data?.data ?? []).map((item) => {
+            {list.rows.map((item) => {
               const company = typeof item.companyId === 'object' ? item.companyId : null;
               const plan = typeof item.planId === 'object' ? item.planId : null;
               return (
@@ -54,6 +57,7 @@ export function SubscriptionsPage() {
             })}
           </TableBody>
         </Table>
+        <TablePager total={list.total} page={list.page} rowsPerPage={list.rowsPerPage} onPageChange={list.onPageChange} onRowsPerPageChange={list.onRowsPerPageChange} />
       </Paper>
     </>
   );

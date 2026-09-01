@@ -14,7 +14,9 @@ import {
 } from '@mui/material';
 import { getResource, listResource } from '../api/resources';
 import { formatDate, inr } from '../components/GenerateBillDialog';
+import { ListSearch, TablePager } from '../components/ListControls';
 import { PageHeader, StatusChip } from '../components/PageHeader';
+import { usePagedList } from '../hooks/usePagedList';
 
 type Row = Record<string, unknown>;
 
@@ -37,7 +39,7 @@ function addressOf(value: unknown) {
 
 export function InvoicesPage() {
   const navigate = useNavigate();
-  const { data } = useQuery({ queryKey: ['invoices'], queryFn: () => listResource('/invoices', { limit: 50 }) });
+  const list = usePagedList(['invoices'], (params) => listResource('/invoices', params));
 
   return (
     <>
@@ -45,6 +47,7 @@ export function InvoicesPage() {
         title="Bills"
         subtitle="Invoices generated from inward and outward slips. Storage rent is calculated on outward."
       />
+      <ListSearch value={list.searchInput} onChange={list.setSearchInput} onSubmit={list.applySearch} />
       <Paper>
         <Table>
           <TableHead>
@@ -58,7 +61,11 @@ export function InvoicesPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {(data?.data ?? []).map((row) => {
+            {list.rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6}><Typography color="text.secondary">No bills yet.</Typography></TableCell>
+              </TableRow>
+            ) : list.rows.map((row) => {
               const item = row as Row;
               return (
                 <TableRow
@@ -78,6 +85,7 @@ export function InvoicesPage() {
             })}
           </TableBody>
         </Table>
+        <TablePager total={list.total} page={list.page} rowsPerPage={list.rowsPerPage} onPageChange={list.onPageChange} onRowsPerPageChange={list.onRowsPerPageChange} />
       </Paper>
     </>
   );

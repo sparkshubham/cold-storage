@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ZodType } from 'zod';
 import {
   Button,
   Dialog,
@@ -19,8 +20,11 @@ import {
 } from '@mui/material';
 import { createResource, deleteResource, listResource } from '../api/resources';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ListSearch, TablePager } from '../components/ListControls';
 import { PageHeader, StatusChip } from '../components/PageHeader';
 import { useAuth } from '../context/AuthContext';
+import { usePagedList } from '../hooks/usePagedList';
+import { apiErrorMessage, validateForm } from '../validation/schemas';
 
 export type CrudField = {
   name: string;
@@ -59,10 +63,12 @@ function optionLabel(row: Record<string, unknown>) {
 function ResourceSelect({
   field,
   form,
+  error,
   onChange,
 }: {
   field: CrudField;
   form: Record<string, string | number>;
+  error?: string;
   onChange: (value: string) => void;
 }) {
   const parentValue = field.dependsOn ? String(form[field.dependsOn] ?? '') : '';
@@ -84,6 +90,8 @@ function ResourceSelect({
       onChange={(e) => onChange(e.target.value)}
       required={field.required}
       disabled={Boolean(field.dependsOn) && !parentValue}
+      error={Boolean(error)}
+      helperText={error}
     >
       {(data?.data ?? []).map((row) => {
         const item = row as Record<string, unknown>;
@@ -104,6 +112,7 @@ export function CrudPage({
   queryKey,
   columns,
   fields,
+  schema,
   createPermission,
   deletePermission,
 }: {
@@ -113,6 +122,7 @@ export function CrudPage({
   queryKey: string;
   columns: CrudColumn[];
   fields: CrudField[];
+  schema: ZodType<unknown>;
   createPermission: string;
   deletePermission: string;
 }) {
@@ -128,14 +138,16 @@ export function CrudPage({
   const [open, setOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState(defaults);
-  const { data } = useQuery({ queryKey: [queryKey], queryFn: () => listResource(endpoint, { limit: 50 }) });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const list = usePagedList([queryKey], (params) => listResource(endpoint, params));
 
   const create = useMutation({
-    mutationFn: () => createResource(endpoint, form),
+    mutationFn: (payload: Record<string, unknown>) => createResource(endpoint, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
       setOpen(false);
       setForm(defaults);
+      setErrors({});
     },
   });
   const remove = useMutation({
@@ -147,6 +159,7 @@ export function CrudPage({
   });
 
   const setField = (name: string, value: string | number) => {
+    setErrors((prev) => ({ ...prev, [name]: '' }));
     setForm((prev) => {
       const next = { ...prev, [name]: value };
       fields.forEach((field) => {
@@ -154,6 +167,16 @@ export function CrudPage({
       });
       return next;
     });
+  };
+
+  const submit = () => {
+    const result = validateForm(schema, form);
+    if (!result.ok) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
+    create.mutate(result.data as Record<string, unknown>);
   };
 
   return (
@@ -167,6 +190,7 @@ export function CrudPage({
               variant="contained"
               onClick={() => {
                 setForm(defaults);
+                setErrors({});
                 setOpen(true);
               }}
             >
@@ -175,6 +199,7 @@ export function CrudPage({
           ) : undefined
         }
       />
+      <ListSearch value={list.searchInput} onChange={list.setSearchInput} onSubmit={list.applySearch} />
       <Paper>
         <Table>
           <TableHead>
@@ -186,14 +211,14 @@ export function CrudPage({
             </TableRow>
           </TableHead>
           <TableBody>
-            {(data?.data ?? []).length === 0 ? (
+            {list.rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length + 1}>
                   <Typography color="text.secondary">No records yet.</Typography>
                 </TableCell>
               </TableRow>
             ) : (
-              (data?.data ?? []).map((row) => {
+              list.rows.map((row) => {
                 const item = row as Record<string, unknown>;
                 return (
                   <TableRow key={String(item._id)}>
@@ -215,14 +240,27 @@ export function CrudPage({
             )}
           </TableBody>
         </Table>
+        <TablePager
+          total={list.total}
+          page={list.page}
+          rowsPerPage={list.rowsPerPage}
+          onPageChange={list.onPageChange}
+          onRowsPerPageChange={list.onRowsPerPageChange}
+        />
       </Paper>
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>New record</DialogTitle>
         <DialogContent>
-          <Stack gap={2} mt={1}>
+          <Stack gap={2} mt={1} component="form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
             {fields.map((field) =>
               field.type === 'select' ? (
-                <ResourceSelect key={field.name} field={field} form={form} onChange={(value) => setField(field.name, value)} />
+                <ResourceSelect
+                  key={field.name}
+                  field={field}
+                  form={form}
+                  error={errors[field.name]}
+                  onChange={(value) => setField(field.name, value)}
+                />
               ) : (
                 <TextField
                   key={field.name}
@@ -232,20 +270,22 @@ export function CrudPage({
                   minRows={field.type === 'textarea' ? 3 : undefined}
                   required={field.required}
                   value={form[field.name] ?? ''}
+                  error={Boolean(errors[field.name])}
+                  helperText={errors[field.name]}
                   onChange={(e) => setField(field.name, field.type === 'number' ? Number(e.target.value) : e.target.value)}
                 />
               ),
             )}
             {create.isError ? (
               <Typography color="error" variant="body2">
-                {(create.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Create failed'}
+                {apiErrorMessage(create.error, 'Create failed')}
               </Typography>
             ) : null}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => create.mutate()} disabled={create.isPending}>
+          <Button variant="contained" onClick={submit} disabled={create.isPending}>
             Create
           </Button>
         </DialogActions>

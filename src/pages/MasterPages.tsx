@@ -1,4 +1,14 @@
 import { CrudPage } from './CrudPage';
+import {
+  categorySchema,
+  chamberSchema,
+  customerSchema,
+  locationSchema,
+  productSchema,
+  rackSchema,
+  supplierSchema,
+  unitSchema,
+} from '../validation/schemas';
 
 export function CustomersPage() {
   return (
@@ -9,6 +19,7 @@ export function CustomersPage() {
       queryKey="customers"
       createPermission="customer.create"
       deletePermission="customer.delete"
+      schema={customerSchema}
       columns={[
         { key: 'code', label: 'Code' },
         { key: 'name', label: 'Name' },
@@ -39,6 +50,7 @@ export function SuppliersPage() {
       queryKey="suppliers"
       createPermission="supplier.create"
       deletePermission="supplier.delete"
+      schema={supplierSchema}
       columns={[
         { key: 'code', label: 'Code' },
         { key: 'name', label: 'Name' },
@@ -66,6 +78,7 @@ export function CategoriesPage() {
       queryKey="categories"
       createPermission="category.create"
       deletePermission="category.delete"
+      schema={categorySchema}
       columns={[
         { key: 'code', label: 'Code' },
         { key: 'name', label: 'Name' },
@@ -88,6 +101,7 @@ export function UnitsPage() {
       queryKey="units"
       createPermission="unit.create"
       deletePermission="unit.delete"
+      schema={unitSchema}
       columns={[
         { key: 'code', label: 'Code' },
         { key: 'name', label: 'Name' },
@@ -110,6 +124,7 @@ export function ProductsPage() {
       queryKey="products"
       createPermission="product.create"
       deletePermission="product.delete"
+      schema={productSchema}
       columns={[
         { key: 'code', label: 'Code' },
         { key: 'name', label: 'Name' },
@@ -138,6 +153,7 @@ export function ChambersPage() {
       queryKey="chambers"
       createPermission="chamber.create"
       deletePermission="chamber.delete"
+      schema={chamberSchema}
       columns={[
         { key: 'code', label: 'Code' },
         { key: 'name', label: 'Name' },
@@ -167,6 +183,7 @@ export function RacksPage() {
       queryKey="racks"
       createPermission="rack.create"
       deletePermission="rack.delete"
+      schema={rackSchema}
       columns={[
         { key: 'code', label: 'Code' },
         { key: 'name', label: 'Name' },
@@ -194,6 +211,7 @@ export function LocationsPage() {
       queryKey="locations"
       createPermission="location.create"
       deletePermission="location.delete"
+      schema={locationSchema}
       columns={[
         { key: 'code', label: 'Code' },
         { key: 'chamberId', label: 'Chamber' },

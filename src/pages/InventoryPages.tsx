@@ -20,8 +20,17 @@ import {
 } from '@mui/material';
 import { createResource, listResource } from '../api/resources';
 import { GenerateBillDialog } from '../components/GenerateBillDialog';
+import { ListSearch, TablePager } from '../components/ListControls';
 import { PageHeader, StatusChip } from '../components/PageHeader';
 import { useAuth } from '../context/AuthContext';
+import { usePagedList } from '../hooks/usePagedList';
+import {
+  adjustmentSchema,
+  apiErrorMessage,
+  inwardOutwardSchema,
+  openingStockSchema,
+  validateForm,
+} from '../validation/schemas';
 
 type Row = Record<string, unknown>;
 
@@ -36,9 +45,11 @@ function labelOf(value: unknown) {
 function StorageFields({
   form,
   setForm,
+  errors,
 }: {
   form: Record<string, string | number>;
   setForm: Dispatch<SetStateAction<Record<string, string | number>>>;
+  errors: Record<string, string>;
 }) {
   const { data: customers } = useQuery({ queryKey: ['customers', 'options'], queryFn: () => listResource('/customers', { limit: 100 }) });
   const { data: products } = useQuery({ queryKey: ['products', 'options'], queryFn: () => listResource('/products', { limit: 100 }) });
@@ -54,15 +65,17 @@ function StorageFields({
     enabled: Boolean(form.rackId),
   });
 
+  const set = (patch: Record<string, string | number>) => setForm((prev) => ({ ...prev, ...patch }));
+
   return (
     <Stack gap={2} mt={1}>
-      <TextField select label="Customer" value={form.customerId} onChange={(e) => setForm((prev) => ({ ...prev, customerId: e.target.value }))}>
+      <TextField select required label="Customer" value={form.customerId} error={Boolean(errors.customerId)} helperText={errors.customerId} onChange={(e) => set({ customerId: e.target.value })}>
         {(customers?.data ?? []).map((row) => {
           const item = row as Row;
           return <MenuItem key={String(item._id)} value={String(item._id)}>{labelOf(item)}</MenuItem>;
         })}
       </TextField>
-      <TextField select label="Product" value={form.productId} onChange={(e) => setForm((prev) => ({ ...prev, productId: e.target.value }))}>
+      <TextField select required label="Product" value={form.productId} error={Boolean(errors.productId)} helperText={errors.productId} onChange={(e) => set({ productId: e.target.value })}>
         {(products?.data ?? []).map((row) => {
           const item = row as Row;
           return <MenuItem key={String(item._id)} value={String(item._id)}>{labelOf(item)}</MenuItem>;
@@ -70,9 +83,12 @@ function StorageFields({
       </TextField>
       <TextField
         select
+        required
         label="Chamber"
         value={form.chamberId}
-        onChange={(e) => setForm((prev) => ({ ...prev, chamberId: e.target.value, rackId: '', locationId: '' }))}
+        error={Boolean(errors.chamberId)}
+        helperText={errors.chamberId}
+        onChange={(e) => set({ chamberId: e.target.value, rackId: '', locationId: '' })}
       >
         {(chambers?.data ?? []).map((row) => {
           const item = row as Row;
@@ -81,26 +97,29 @@ function StorageFields({
       </TextField>
       <TextField
         select
+        required
         label="Rack"
         value={form.rackId}
         disabled={!form.chamberId}
-        onChange={(e) => setForm((prev) => ({ ...prev, rackId: e.target.value, locationId: '' }))}
+        error={Boolean(errors.rackId)}
+        helperText={errors.rackId}
+        onChange={(e) => set({ rackId: e.target.value, locationId: '' })}
       >
         {(racks?.data ?? []).map((row) => {
           const item = row as Row;
           return <MenuItem key={String(item._id)} value={String(item._id)}>{labelOf(item)}</MenuItem>;
         })}
       </TextField>
-      <TextField select label="Location" value={form.locationId} disabled={!form.rackId} onChange={(e) => setForm((prev) => ({ ...prev, locationId: e.target.value }))}>
+      <TextField select required label="Location" value={form.locationId} disabled={!form.rackId} error={Boolean(errors.locationId)} helperText={errors.locationId} onChange={(e) => set({ locationId: e.target.value })}>
         {(locations?.data ?? []).map((row) => {
           const item = row as Row;
           return <MenuItem key={String(item._id)} value={String(item._id)}>{String(item.code ?? item._id)}</MenuItem>;
         })}
       </TextField>
-      <TextField label="Quantity" type="number" value={form.quantity} onChange={(e) => setForm((prev) => ({ ...prev, quantity: Number(e.target.value) }))} />
-      <TextField label="Unit" value={form.unit} onChange={(e) => setForm((prev) => ({ ...prev, unit: e.target.value }))} />
-      <TextField label="Batch number" value={form.batchNumber} onChange={(e) => setForm((prev) => ({ ...prev, batchNumber: e.target.value }))} />
-      <TextField label="Notes" value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} />
+      <TextField required label="Quantity" type="number" value={form.quantity} error={Boolean(errors.quantity)} helperText={errors.quantity} onChange={(e) => set({ quantity: Number(e.target.value) })} />
+      <TextField required label="Unit" value={form.unit} error={Boolean(errors.unit)} helperText={errors.unit} onChange={(e) => set({ unit: e.target.value })} />
+      <TextField label="Batch number" value={form.batchNumber} onChange={(e) => set({ batchNumber: e.target.value })} />
+      <TextField label="Notes" value={form.notes} onChange={(e) => set({ notes: e.target.value })} />
     </Stack>
   );
 }
@@ -122,17 +141,30 @@ export function InventoryPage() {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<'opening' | 'adjustment' | null>(null);
   const [form, setForm] = useState<Record<string, string | number>>(emptyForm);
-  const { data } = useQuery({ queryKey: ['inventory'], queryFn: () => listResource('/inventory', { limit: 50 }) });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const list = usePagedList(['inventory'], (params) => listResource('/inventory', params));
   const save = useMutation({
-    mutationFn: () =>
-      createResource(mode === 'opening' ? '/inventory/opening' : '/inventory/adjustments', form),
+    mutationFn: (payload: Record<string, unknown>) =>
+      createResource(mode === 'opening' ? '/inventory/opening' : '/inventory/adjustments', payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['company-dashboard'] });
       setMode(null);
       setForm(emptyForm);
+      setErrors({});
     },
   });
+
+  const submit = () => {
+    const schema = mode === 'opening' ? openingStockSchema : adjustmentSchema;
+    const result = validateForm(schema, form);
+    if (!result.ok) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
+    save.mutate(result.data as Record<string, unknown>);
+  };
 
   return (
     <>
@@ -142,12 +174,13 @@ export function InventoryPage() {
         actions={
           hasPermission('inventory.adjust') ? (
             <Stack direction="row" gap={1}>
-              <Button variant="contained" onClick={() => setMode('opening')}>Opening stock</Button>
-              <Button variant="outlined" onClick={() => setMode('adjustment')}>Adjustment</Button>
+              <Button variant="contained" onClick={() => { setErrors({}); setForm(emptyForm); setMode('opening'); }}>Opening stock</Button>
+              <Button variant="outlined" onClick={() => { setErrors({}); setForm(emptyForm); setMode('adjustment'); }}>Adjustment</Button>
             </Stack>
           ) : undefined
         }
       />
+      <ListSearch value={list.searchInput} onChange={list.setSearchInput} onSubmit={list.applySearch} />
       <Paper>
         <Table>
           <TableHead>
@@ -161,7 +194,11 @@ export function InventoryPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {(data?.data ?? []).map((row) => {
+            {list.rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6}><Typography color="text.secondary">No stock rows yet.</Typography></TableCell>
+              </TableRow>
+            ) : list.rows.map((row) => {
               const item = row as Row;
               return (
                 <TableRow key={String(item._id)}>
@@ -176,11 +213,12 @@ export function InventoryPage() {
             })}
           </TableBody>
         </Table>
+        <TablePager total={list.total} page={list.page} rowsPerPage={list.rowsPerPage} onPageChange={list.onPageChange} onRowsPerPageChange={list.onRowsPerPageChange} />
       </Paper>
       <Dialog open={Boolean(mode)} onClose={() => setMode(null)} fullWidth maxWidth="sm">
         <DialogTitle>{mode === 'opening' ? 'Opening stock' : 'Stock adjustment'}</DialogTitle>
         <DialogContent>
-          <StorageFields form={form} setForm={setForm} />
+          <StorageFields form={form} setForm={setForm} errors={errors} />
           {mode === 'adjustment' ? (
             <Typography variant="caption" color="text.secondary" display="block" mt={1}>
               Use a negative quantity to reduce stock.
@@ -188,13 +226,13 @@ export function InventoryPage() {
           ) : null}
           {save.isError ? (
             <Typography color="error" variant="body2" mt={1}>
-              {(save.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Save failed'}
+              {apiErrorMessage(save.error, 'Save failed')}
             </Typography>
           ) : null}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setMode(null)}>Cancel</Button>
-          <Button variant="contained" onClick={() => save.mutate()} disabled={save.isPending}>Save</Button>
+          <Button variant="contained" onClick={submit} disabled={save.isPending}>Save</Button>
         </DialogActions>
       </Dialog>
     </>
@@ -207,31 +245,44 @@ export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [billId, setBillId] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<Record<string, string | number>>({ ...emptyForm, vehicleNumber: '' });
   const path = kind === 'inward' ? '/inwards' : '/outwards';
   const listPath = kind === 'inward' ? '/app/inwards' : '/app/outwards';
-  const { data } = useQuery({ queryKey: [kind], queryFn: () => listResource(path, { limit: 50 }) });
+  const list = usePagedList([kind], (params) => listResource(path, params));
   const save = useMutation({
-    mutationFn: () => createResource(path, form),
+    mutationFn: (payload: Record<string, unknown>) => createResource(path, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [kind] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['company-dashboard'] });
       setOpen(false);
       setForm({ ...emptyForm, vehicleNumber: '' });
+      setErrors({});
     },
   });
   const canCreate = hasPermission(kind === 'inward' ? 'inward.create' : 'outward.create');
   const canBill = hasPermission('invoice.create');
   const canViewBill = hasPermission('invoice.view');
 
+  const submit = () => {
+    const result = validateForm(inwardOutwardSchema, form);
+    if (!result.ok) {
+      setErrors(result.errors);
+      return;
+    }
+    setErrors({});
+    save.mutate(result.data as Record<string, unknown>);
+  };
+
   return (
     <>
       <PageHeader
         title={kind === 'inward' ? 'Inwards' : 'Outwards'}
         subtitle={kind === 'inward' ? 'Goods received into chambers. Open a slip to view or generate a bill.' : 'Goods issued from chambers. Generate the storage bill from the outward slip.'}
-        actions={canCreate ? <Button variant="contained" onClick={() => setOpen(true)}>Create</Button> : undefined}
+        actions={canCreate ? <Button variant="contained" onClick={() => { setErrors({}); setForm({ ...emptyForm, vehicleNumber: '' }); setOpen(true); }}>Create</Button> : undefined}
       />
+      <ListSearch value={list.searchInput} onChange={list.setSearchInput} onSubmit={list.applySearch} />
       <Paper>
         <Table>
           <TableHead>
@@ -247,7 +298,11 @@ export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {(data?.data ?? []).map((row) => {
+            {list.rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8}><Typography color="text.secondary">No {kind} slips yet.</Typography></TableCell>
+              </TableRow>
+            ) : list.rows.map((row) => {
               const item = row as Row;
               const id = String(item._id);
               const invoice = item.invoiceId as Row | string | null | undefined;
@@ -277,11 +332,12 @@ export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
             })}
           </TableBody>
         </Table>
+        <TablePager total={list.total} page={list.page} rowsPerPage={list.rowsPerPage} onPageChange={list.onPageChange} onRowsPerPageChange={list.onRowsPerPageChange} />
       </Paper>
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{kind === 'inward' ? 'New inward' : 'New outward'}</DialogTitle>
         <DialogContent>
-          <StorageFields form={form} setForm={setForm} />
+          <StorageFields form={form} setForm={setForm} errors={errors} />
           <TextField
             sx={{ mt: 2 }}
             fullWidth
@@ -291,13 +347,13 @@ export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
           />
           {save.isError ? (
             <Typography color="error" variant="body2" mt={1}>
-              {(save.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Save failed'}
+              {apiErrorMessage(save.error, 'Save failed')}
             </Typography>
           ) : null}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => save.mutate()} disabled={save.isPending}>Save</Button>
+          <Button variant="contained" onClick={submit} disabled={save.isPending}>Save</Button>
         </DialogActions>
       </Dialog>
       <GenerateBillDialog sourceType={kind} sourceId={billId} open={Boolean(billId)} onClose={() => setBillId('')} />
@@ -306,10 +362,11 @@ export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
 }
 
 export function StockLedgerPage() {
-  const { data } = useQuery({ queryKey: ['stock-transactions'], queryFn: () => listResource('/stock-transactions', { limit: 50 }) });
+  const list = usePagedList(['stock-transactions'], (params) => listResource('/stock-transactions', params));
   return (
     <>
       <PageHeader title="Stock ledger" subtitle="Immutable stock transactions. Inventory is never edited without a row here." />
+      <ListSearch value={list.searchInput} onChange={list.setSearchInput} onSubmit={list.applySearch} />
       <Paper>
         <Table>
           <TableHead>
@@ -323,7 +380,11 @@ export function StockLedgerPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {(data?.data ?? []).map((row) => {
+            {list.rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6}><Typography color="text.secondary">No stock transactions yet.</Typography></TableCell>
+              </TableRow>
+            ) : list.rows.map((row) => {
               const item = row as Row;
               return (
                 <TableRow key={String(item._id)}>
@@ -338,6 +399,7 @@ export function StockLedgerPage() {
             })}
           </TableBody>
         </Table>
+        <TablePager total={list.total} page={list.page} rowsPerPage={list.rowsPerPage} onPageChange={list.onPageChange} onRowsPerPageChange={list.onRowsPerPageChange} />
       </Paper>
     </>
   );

@@ -3,20 +3,28 @@ import { Link as RouterLink } from 'react-router-dom';
 import { Alert, Box, Button, Link, Paper, TextField, Typography } from '@mui/material';
 import { forgotPassword } from '../api/auth';
 import axios from 'axios';
+import { forgotPasswordSchema, validateForm } from '../validation/schemas';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
+  const [fieldError, setFieldError] = useState('');
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
+    const result = validateForm(forgotPasswordSchema, { email });
+    if (!result.ok) {
+      setFieldError(result.errors.email ?? 'Enter a valid email');
+      return;
+    }
+    setFieldError('');
     try {
-      const result = await forgotPassword(email);
-      setMessage(result.message);
-      setToken(result.data.resetToken ?? '');
+      const response = await forgotPassword(result.data.email);
+      setMessage(response.message);
+      setToken(response.data.resetToken ?? '');
     } catch (err) {
       setError(axios.isAxiosError(err) ? String(err.response?.data?.message ?? 'Request failed') : 'Request failed');
     }
@@ -30,8 +38,17 @@ export function ForgotPasswordPage() {
         {error ? <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert> : null}
         {message ? <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert> : null}
         {token ? <Alert severity="info" sx={{ mb: 2 }}>Dev reset token: {token}</Alert> : null}
-        <Box component="form" onSubmit={onSubmit}>
-          <TextField label="Email" type="email" fullWidth sx={{ mb: 2 }} value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Box component="form" onSubmit={onSubmit} noValidate>
+          <TextField
+            label="Email"
+            type="email"
+            fullWidth
+            sx={{ mb: 2 }}
+            value={email}
+            error={Boolean(fieldError)}
+            helperText={fieldError}
+            onChange={(e) => setEmail(e.target.value)}
+          />
           <Button type="submit" variant="contained" fullWidth>Send reset link</Button>
         </Box>
         <Link component={RouterLink} to="/login" sx={{ display: 'inline-block', mt: 2 }}>Back to login</Link>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,17 +18,17 @@ import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { activateCompany, deleteCompany, listCompanies, suspendCompany } from '../api/companies';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ListSearch, TablePager } from '../components/ListControls';
 import { PageHeader, StatusChip } from '../components/PageHeader';
+import { usePagedList } from '../hooks/usePagedList';
 import type { Company } from '../types';
 
 export function CompaniesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [target, setTarget] = useState<Company | null>(null);
-  const params = useMemo(() => ({ search, status, page: 1, limit: 20 }), [search, status]);
-  const { data } = useQuery({ queryKey: ['companies', params], queryFn: () => listCompanies(params) });
+  const list = usePagedList(['companies'], (params) => listCompanies(params), { status: status || undefined });
 
   const suspend = useMutation({
     mutationFn: (id: string) => suspendCompany(id),
@@ -53,9 +53,9 @@ export function CompaniesPage() {
         subtitle="Create, suspend, activate, and inspect tenant companies"
         actions={<Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/super-admin/companies/new')}>Add company</Button>}
       />
-      <Stack direction={{ xs: 'column', sm: 'row' }} gap={2} mb={2}>
-        <TextField label="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <TextField select label="Status" value={status} onChange={(e) => setStatus(e.target.value)} sx={{ minWidth: 180 }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} gap={2} mb={2} alignItems={{ sm: 'center' }}>
+        <ListSearch value={list.searchInput} onChange={list.setSearchInput} onSubmit={list.applySearch} />
+        <TextField select label="Status" size="small" value={status} onChange={(e) => setStatus(e.target.value)} sx={{ minWidth: 180, mb: 2 }}>
           <MenuItem value="">All</MenuItem>
           <MenuItem value="active">Active</MenuItem>
           <MenuItem value="trial">Trial</MenuItem>
@@ -74,7 +74,7 @@ export function CompaniesPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {(data?.data ?? []).map((company) => (
+            {list.rows.map((company) => (
               <TableRow key={company._id} hover>
                 <TableCell>{company.name}</TableCell>
                 <TableCell>{company.email}</TableCell>
@@ -93,6 +93,7 @@ export function CompaniesPage() {
             ))}
           </TableBody>
         </Table>
+        <TablePager total={list.total} page={list.page} rowsPerPage={list.rowsPerPage} onPageChange={list.onPageChange} onRowsPerPageChange={list.onRowsPerPageChange} />
       </Paper>
       <ConfirmDialog
         open={Boolean(target)}

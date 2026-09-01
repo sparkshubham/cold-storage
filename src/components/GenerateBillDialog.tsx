@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import { createResource, getResource } from '../api/resources';
+import { billRatesSchema, validateForm } from '../validation/schemas';
 
 export const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
 
@@ -83,6 +84,7 @@ export function GenerateBillDialog({
   const [rates, setRates] = useState<Rates>(emptyRates);
   const [applied, setApplied] = useState<Partial<Rates>>({});
   const [notes, setNotes] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const preview = useQuery({
     queryKey: ['invoice-preview', sourceType, sourceId, applied],
@@ -96,10 +98,22 @@ export function GenerateBillDialog({
     if (!open) {
       setApplied({});
       setNotes('');
+      setErrors({});
       return;
     }
     if (draft?.rates) setRates(draft.rates);
   }, [open, draft?.rates]);
+
+  const applyRates = () => {
+    const result = validateForm(billRatesSchema, rates);
+    if (!result.ok) {
+      setErrors(result.errors);
+      return false;
+    }
+    setErrors({});
+    setApplied(result.data);
+    return true;
+  };
 
   const generate = useMutation({
     mutationFn: () =>
@@ -140,6 +154,8 @@ export function GenerateBillDialog({
               label="Storage rate / unit / day"
               type="number"
               value={rates.storageRatePerUnitPerDay}
+              error={Boolean(errors.storageRatePerUnitPerDay)}
+              helperText={errors.storageRatePerUnitPerDay}
               onChange={(e) => setRates({ ...rates, storageRatePerUnitPerDay: Number(e.target.value) })}
               fullWidth
             />
@@ -148,6 +164,8 @@ export function GenerateBillDialog({
             label="Inward handling rate"
             type="number"
             value={rates.inwardHandlingRate}
+            error={Boolean(errors.inwardHandlingRate)}
+            helperText={errors.inwardHandlingRate}
             onChange={(e) => setRates({ ...rates, inwardHandlingRate: Number(e.target.value) })}
             fullWidth
           />
@@ -156,6 +174,8 @@ export function GenerateBillDialog({
               label="Outward handling rate"
               type="number"
               value={rates.outwardHandlingRate}
+              error={Boolean(errors.outwardHandlingRate)}
+              helperText={errors.outwardHandlingRate}
               onChange={(e) => setRates({ ...rates, outwardHandlingRate: Number(e.target.value) })}
               fullWidth
             />
@@ -164,11 +184,13 @@ export function GenerateBillDialog({
             label="GST %"
             type="number"
             value={rates.gstRate}
+            error={Boolean(errors.gstRate)}
+            helperText={errors.gstRate}
             onChange={(e) => setRates({ ...rates, gstRate: Number(e.target.value) })}
             fullWidth
           />
         </Stack>
-        <Button variant="outlined" onClick={() => setApplied(rates)} sx={{ mb: 2 }}>
+        <Button variant="outlined" onClick={() => applyRates()} sx={{ mb: 2 }}>
           Recalculate
         </Button>
         {draft?.alreadyBilled ? (
@@ -234,7 +256,7 @@ export function GenerateBillDialog({
             Open bill
           </Button>
         ) : (
-          <Button variant="contained" onClick={() => generate.mutate()} disabled={generate.isPending || !draft}>
+          <Button variant="contained" onClick={() => applyRates() && generate.mutate()} disabled={generate.isPending || !draft}>
             Generate bill
           </Button>
         )}
