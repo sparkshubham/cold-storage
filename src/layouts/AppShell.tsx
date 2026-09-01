@@ -90,7 +90,7 @@ export function AppShell({ variant }: { variant: 'super' | 'company' }) {
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#0A2540', color: '#fff' }}>
-      <Toolbar sx={{ gap: 1.5 }}>
+      <Toolbar sx={{ gap: 1.5, flexShrink: 0 }}>
         <AcUnitIcon />
         <Box>
           <Typography fontWeight={800}>ColdFlow</Typography>
@@ -100,7 +100,7 @@ export function AppShell({ variant }: { variant: 'super' | 'company' }) {
         </Box>
       </Toolbar>
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
-      <List sx={{ px: 1, py: 2, flex: 1 }}>
+      <List sx={{ px: 1, py: 2, flex: 1, overflowY: 'auto' }}>
         {items.map((item) => {
           const selected = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
           return (
@@ -128,7 +128,7 @@ export function AppShell({ variant }: { variant: 'super' | 'company' }) {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'background.default' }}>
       <AppBar position="fixed" color="inherit" elevation={0} sx={{ borderBottom: '1px solid #E6EAF2', width: { md: `calc(100% - ${drawerWidth}px)` }, ml: { md: `${drawerWidth}px` } }}>
         <Toolbar>
           {compact ? (
@@ -156,17 +156,36 @@ export function AppShell({ variant }: { variant: 'super' | 'company' }) {
           </Menu>
         </Toolbar>
       </AppBar>
-      <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}>
+      <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: 0 }}>
         <Drawer
           variant={compact ? 'temporary' : 'permanent'}
           open={compact ? open : true}
           onClose={() => setOpen(false)}
-          PaperProps={{ sx: { width: drawerWidth, border: 'none' } }}
+          PaperProps={{
+            sx: {
+              width: drawerWidth,
+              border: 'none',
+              bgcolor: '#0A2540',
+              color: '#fff',
+              height: '100dvh',
+            },
+          }}
         >
           {drawer}
         </Drawer>
       </Box>
-      <Box component="main" sx={{ flex: 1, p: { xs: 2, md: 4 }, mt: 8 }}>
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          height: '100dvh',
+          overflow: 'auto',
+          bgcolor: 'background.default',
+          p: { xs: 2, md: 4 },
+          pt: { xs: 10, md: 12 },
+        }}
+      >
         <Outlet />
       </Box>
     </Box>

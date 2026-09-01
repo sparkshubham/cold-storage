@@ -20,6 +20,13 @@ export const theme = createTheme({
     button: { textTransform: 'none', fontWeight: 600 },
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        html: { height: '100%' },
+        body: { height: '100%', margin: 0 },
+        '#root': { minHeight: '100%', height: '100%' },
+      },
+    },
     MuiButton: {
       styleOverrides: { root: { borderRadius: 10, paddingInline: 16 } },
     },
