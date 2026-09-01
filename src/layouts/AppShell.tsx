@@ -35,6 +35,7 @@ import ScaleIcon from '@mui/icons-material/ScaleOutlined';
 import LocalShippingIcon from '@mui/icons-material/LocalShippingOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuoteOutlined';
+import SettingsIcon from '@mui/icons-material/SettingsOutlined';
 import { useAuth } from '../context/AuthContext';
 
 const drawerWidth = 260;
@@ -86,6 +87,7 @@ export function AppShell({ variant }: { variant: 'super' | 'company' }) {
           { label: 'Bills', to: '/app/invoices', icon: <RequestQuoteIcon />, permission: 'invoice.view' },
           { label: 'Stock ledger', to: '/app/stock-ledger', icon: <ReceiptLongIcon />, permission: 'inventory.view' },
           { label: 'Users', to: '/app/users', icon: <PeopleIcon />, permission: 'user.view' },
+          { label: 'Billing settings', to: '/app/settings', icon: <SettingsIcon />, permission: 'settings.view' },
           { label: 'Audit logs', to: '/app/audit-logs', icon: <HistoryIcon />, permission: 'audit.view' },
         ].filter((item) => !item.permission || hasPermission(item.permission));
 

@@ -157,6 +157,32 @@ export const billRatesSchema = z.object({
   gstRate: z.coerce.number().min(0, 'GST cannot be negative').max(100, 'GST cannot exceed 100%'),
 });
 
+export const unitRateRowSchema = z.object({
+  unit: z.string().trim().min(1, 'Unit is required').toUpperCase(),
+  storageRatePerUnitPerDay: z.coerce.number().min(0, 'Rate cannot be negative'),
+  inwardHandlingRate: z.coerce.number().min(0, 'Rate cannot be negative'),
+  outwardHandlingRate: z.coerce.number().min(0, 'Rate cannot be negative'),
+});
+
+export const companySettingsSchema = z
+  .object({
+    invoicePrefix: z.string().trim().min(1, 'Prefix is required').max(12, 'Prefix is too long'),
+    defaultGstRate: z.coerce.number().min(0, 'GST cannot be negative').max(100, 'GST cannot exceed 100%'),
+    storageRatePerUnitPerDay: z.coerce.number().min(0, 'Rate cannot be negative'),
+    inwardHandlingRate: z.coerce.number().min(0, 'Rate cannot be negative'),
+    outwardHandlingRate: z.coerce.number().min(0, 'Rate cannot be negative'),
+    unitRates: z.array(unitRateRowSchema).min(1, 'Add at least one unit rate (for example MT or BAG)'),
+  })
+  .superRefine((value, ctx) => {
+    const seen = new Set<string>();
+    value.unitRates.forEach((row, index) => {
+      if (seen.has(row.unit)) {
+        ctx.addIssue({ code: 'custom', message: `${row.unit} is listed twice`, path: ['unitRates', index, 'unit'] });
+      }
+      seen.add(row.unit);
+    });
+  });
+
 export const userCreateSchema = z.object({
   name: z.string().trim().min(2, 'Name is required'),
   email: z.string().trim().email('Enter a valid email'),

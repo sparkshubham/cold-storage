@@ -28,6 +28,7 @@ import {
 import { InventoryPage, StockLedgerPage, StockMovementPage } from './pages/InventoryPages';
 import { MovementDetailPage } from './pages/MovementDetailPage';
 import { InvoiceDetailPage, InvoicesPage } from './pages/InvoicePages';
+import { SettingsPage } from './pages/SettingsPage';
 
 function Guest({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -86,6 +87,7 @@ export default function App() {
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="invoices/:id" element={<InvoiceDetailPage />} />
         <Route path="stock-ledger" element={<StockLedgerPage />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
       </Route>

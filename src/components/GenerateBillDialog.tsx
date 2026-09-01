@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -50,6 +50,7 @@ export type InvoiceDraft = {
   sourceNumber?: string;
   quantity: number;
   unit: string;
+  rateSource?: 'unit' | 'default';
   storageDays: number;
   items: InvoiceItem[];
   subtotal: number;
@@ -146,13 +147,18 @@ export function GenerateBillDialog({
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {sourceType === 'outward'
-            ? 'Storage rent is quantity × rate per day × days in store (minimum 1 day), plus handling and GST.'
+            ? `Storage rent is quantity × ₹ per ${draft?.unit || 'unit'} per day × days in store (minimum 1 day), plus handling and GST.`
             : 'Inward bills cover handling charges. Storage rent is added when you bill the matching outward.'}
+          {' '}
+          {draft?.unit
+            ? `Using ${draft.rateSource === 'unit' ? `saved ${draft.unit} rates` : `default rates (no ${draft.unit} row in settings)`}. `
+            : null}
+          <RouterLink to="/app/settings">Edit billing settings</RouterLink> to change MT, bag, and other unit prices for future bills.
         </Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} gap={2} mb={2}>
           {sourceType === 'outward' ? (
             <TextField
-              label="Storage rate / unit / day"
+              label={`Storage ₹ / ${draft?.unit || 'unit'} / day`}
               type="number"
               value={rates.storageRatePerUnitPerDay}
               error={Boolean(errors.storageRatePerUnitPerDay)}
@@ -162,7 +168,7 @@ export function GenerateBillDialog({
             />
           ) : null}
           <TextField
-            label="Inward handling rate"
+            label={`Inward handling ₹ / ${draft?.unit || 'unit'}`}
             type="number"
             value={rates.inwardHandlingRate}
             error={Boolean(errors.inwardHandlingRate)}
@@ -172,7 +178,7 @@ export function GenerateBillDialog({
           />
           {sourceType === 'outward' ? (
             <TextField
-              label="Outward handling rate"
+              label={`Outward handling ₹ / ${draft?.unit || 'unit'}`}
               type="number"
               value={rates.outwardHandlingRate}
               error={Boolean(errors.outwardHandlingRate)}
