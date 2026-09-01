@@ -27,7 +27,7 @@ export function PageHeader({
 
 export function StatusChip({ value }: { value: string }) {
   const color =
-    value === 'active' || value === 'paid' || value === 'completed'
+    value === 'active' || value === 'paid' || value === 'completed' || value === 'issued'
       ? 'success'
       : value === 'suspended' || value === 'cancelled' || value === 'expired'
         ? 'error'

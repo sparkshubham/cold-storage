@@ -1,4 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -18,6 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import { createResource, listResource } from '../api/resources';
+import { GenerateBillDialog } from '../components/GenerateBillDialog';
 import { PageHeader, StatusChip } from '../components/PageHeader';
 import { useAuth } from '../context/AuthContext';
 
@@ -54,13 +56,13 @@ function StorageFields({
 
   return (
     <Stack gap={2} mt={1}>
-      <TextField select label="Customer" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
+      <TextField select label="Customer" value={form.customerId} onChange={(e) => setForm((prev) => ({ ...prev, customerId: e.target.value }))}>
         {(customers?.data ?? []).map((row) => {
           const item = row as Row;
           return <MenuItem key={String(item._id)} value={String(item._id)}>{labelOf(item)}</MenuItem>;
         })}
       </TextField>
-      <TextField select label="Product" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
+      <TextField select label="Product" value={form.productId} onChange={(e) => setForm((prev) => ({ ...prev, productId: e.target.value }))}>
         {(products?.data ?? []).map((row) => {
           const item = row as Row;
           return <MenuItem key={String(item._id)} value={String(item._id)}>{labelOf(item)}</MenuItem>;
@@ -70,7 +72,7 @@ function StorageFields({
         select
         label="Chamber"
         value={form.chamberId}
-        onChange={(e) => setForm({ ...form, chamberId: e.target.value, rackId: '', locationId: '' })}
+        onChange={(e) => setForm((prev) => ({ ...prev, chamberId: e.target.value, rackId: '', locationId: '' }))}
       >
         {(chambers?.data ?? []).map((row) => {
           const item = row as Row;
@@ -82,23 +84,23 @@ function StorageFields({
         label="Rack"
         value={form.rackId}
         disabled={!form.chamberId}
-        onChange={(e) => setForm({ ...form, rackId: e.target.value, locationId: '' })}
+        onChange={(e) => setForm((prev) => ({ ...prev, rackId: e.target.value, locationId: '' }))}
       >
         {(racks?.data ?? []).map((row) => {
           const item = row as Row;
           return <MenuItem key={String(item._id)} value={String(item._id)}>{labelOf(item)}</MenuItem>;
         })}
       </TextField>
-      <TextField select label="Location" value={form.locationId} disabled={!form.rackId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
+      <TextField select label="Location" value={form.locationId} disabled={!form.rackId} onChange={(e) => setForm((prev) => ({ ...prev, locationId: e.target.value }))}>
         {(locations?.data ?? []).map((row) => {
           const item = row as Row;
           return <MenuItem key={String(item._id)} value={String(item._id)}>{String(item.code ?? item._id)}</MenuItem>;
         })}
       </TextField>
-      <TextField label="Quantity" type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
-      <TextField label="Unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
-      <TextField label="Batch number" value={form.batchNumber} onChange={(e) => setForm({ ...form, batchNumber: e.target.value })} />
-      <TextField label="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+      <TextField label="Quantity" type="number" value={form.quantity} onChange={(e) => setForm((prev) => ({ ...prev, quantity: Number(e.target.value) }))} />
+      <TextField label="Unit" value={form.unit} onChange={(e) => setForm((prev) => ({ ...prev, unit: e.target.value }))} />
+      <TextField label="Batch number" value={form.batchNumber} onChange={(e) => setForm((prev) => ({ ...prev, batchNumber: e.target.value }))} />
+      <TextField label="Notes" value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} />
     </Stack>
   );
 }
@@ -201,10 +203,13 @@ export function InventoryPage() {
 
 export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
   const { hasPermission } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [billId, setBillId] = useState('');
   const [form, setForm] = useState<Record<string, string | number>>({ ...emptyForm, vehicleNumber: '' });
   const path = kind === 'inward' ? '/inwards' : '/outwards';
+  const listPath = kind === 'inward' ? '/app/inwards' : '/app/outwards';
   const { data } = useQuery({ queryKey: [kind], queryFn: () => listResource(path, { limit: 50 }) });
   const save = useMutation({
     mutationFn: () => createResource(path, form),
@@ -217,12 +222,14 @@ export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
     },
   });
   const canCreate = hasPermission(kind === 'inward' ? 'inward.create' : 'outward.create');
+  const canBill = hasPermission('invoice.create');
+  const canViewBill = hasPermission('invoice.view');
 
   return (
     <>
       <PageHeader
         title={kind === 'inward' ? 'Inwards' : 'Outwards'}
-        subtitle={kind === 'inward' ? 'Completed receipts that add stock through the inventory engine' : 'Completed issues that deduct stock through the inventory engine'}
+        subtitle={kind === 'inward' ? 'Goods received into chambers. Open a slip to view or generate a bill.' : 'Goods issued from chambers. Generate the storage bill from the outward slip.'}
         actions={canCreate ? <Button variant="contained" onClick={() => setOpen(true)}>Create</Button> : undefined}
       />
       <Paper>
@@ -234,20 +241,37 @@ export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
               <TableCell>Product</TableCell>
               <TableCell>Qty</TableCell>
               <TableCell>Location</TableCell>
+              <TableCell>Bill</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell className="no-print">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {(data?.data ?? []).map((row) => {
               const item = row as Row;
+              const id = String(item._id);
+              const invoice = item.invoiceId as Row | string | null | undefined;
+              const invoiceId = invoice && typeof invoice === 'object' ? String(invoice._id ?? '') : invoice ? String(invoice) : '';
+              const invoiceNumber = invoice && typeof invoice === 'object' ? String(invoice.invoiceNumber ?? '') : '';
               return (
-                <TableRow key={String(item._id)}>
+                <TableRow key={id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`${listPath}/${id}`)}>
                   <TableCell>{String(item.inwardNumber ?? item.outwardNumber ?? '')}</TableCell>
                   <TableCell>{labelOf(item.customerId)}</TableCell>
                   <TableCell>{labelOf(item.productId)}</TableCell>
                   <TableCell>{String(item.quantity ?? 0)} {String(item.unit ?? '')}</TableCell>
                   <TableCell>{labelOf(item.locationId)}</TableCell>
+                  <TableCell>{invoiceNumber || (invoiceId ? 'Billed' : '—')}</TableCell>
                   <TableCell><StatusChip value={String(item.status ?? '')} /></TableCell>
+                  <TableCell className="no-print" onClick={(e) => e.stopPropagation()}>
+                    <Stack direction="row" gap={1}>
+                      <Button size="small" onClick={() => navigate(`${listPath}/${id}`)}>View</Button>
+                      {invoiceId && canViewBill ? (
+                        <Button size="small" onClick={() => navigate(`/app/invoices/${invoiceId}`)}>Bill</Button>
+                      ) : canBill ? (
+                        <Button size="small" variant="outlined" onClick={() => setBillId(id)}>Generate bill</Button>
+                      ) : null}
+                    </Stack>
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -257,13 +281,13 @@ export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{kind === 'inward' ? 'New inward' : 'New outward'}</DialogTitle>
         <DialogContent>
-          <StorageFields form={form} setForm={(next) => setForm({ ...form, ...next, vehicleNumber: form.vehicleNumber })} />
+          <StorageFields form={form} setForm={setForm} />
           <TextField
             sx={{ mt: 2 }}
             fullWidth
             label="Vehicle number"
             value={form.vehicleNumber}
-            onChange={(e) => setForm({ ...form, vehicleNumber: e.target.value })}
+            onChange={(e) => setForm((prev) => ({ ...prev, vehicleNumber: e.target.value }))}
           />
           {save.isError ? (
             <Typography color="error" variant="body2" mt={1}>
@@ -276,6 +300,7 @@ export function StockMovementPage({ kind }: { kind: 'inward' | 'outward' }) {
           <Button variant="contained" onClick={() => save.mutate()} disabled={save.isPending}>Save</Button>
         </DialogActions>
       </Dialog>
+      <GenerateBillDialog sourceType={kind} sourceId={billId} open={Boolean(billId)} onClose={() => setBillId('')} />
     </>
   );
 }

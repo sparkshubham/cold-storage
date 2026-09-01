@@ -6,6 +6,11 @@ export async function listResource<T = Record<string, unknown>>(path: string, pa
   return data;
 }
 
+export async function getResource<T = Record<string, unknown>>(path: string, params: Record<string, string | number | undefined> = {}) {
+  const { data } = await api.get<ApiSuccess<T>>(path, { params });
+  return data;
+}
+
 export async function createResource<T = Record<string, unknown>>(path: string, payload: Record<string, unknown>) {
   const { data } = await api.post<ApiSuccess<T>>(path, payload);
   return data;

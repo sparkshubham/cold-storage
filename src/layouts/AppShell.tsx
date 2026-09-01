@@ -34,7 +34,7 @@ import PlaceIcon from '@mui/icons-material/PlaceOutlined';
 import ScaleIcon from '@mui/icons-material/ScaleOutlined';
 import LocalShippingIcon from '@mui/icons-material/LocalShippingOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import ReceiptIcon from '@mui/icons-material/ReceiptLongOutlined';
+import RequestQuoteIcon from '@mui/icons-material/RequestQuoteOutlined';
 import { useAuth } from '../context/AuthContext';
 
 const drawerWidth = 260;
@@ -83,7 +83,8 @@ export function AppShell({ variant }: { variant: 'super' | 'company' }) {
           { label: 'Inventory', to: '/app/inventory', icon: <InventoryIcon />, permission: 'inventory.view' },
           { label: 'Inwards', to: '/app/inwards', icon: <LocalShippingIcon />, permission: 'inward.view' },
           { label: 'Outwards', to: '/app/outwards', icon: <SwapHorizIcon />, permission: 'outward.view' },
-          { label: 'Stock ledger', to: '/app/stock-ledger', icon: <ReceiptIcon />, permission: 'inventory.view' },
+          { label: 'Bills', to: '/app/invoices', icon: <RequestQuoteIcon />, permission: 'invoice.view' },
+          { label: 'Stock ledger', to: '/app/stock-ledger', icon: <ReceiptLongIcon />, permission: 'inventory.view' },
           { label: 'Users', to: '/app/users', icon: <PeopleIcon />, permission: 'user.view' },
           { label: 'Audit logs', to: '/app/audit-logs', icon: <HistoryIcon />, permission: 'audit.view' },
         ].filter((item) => !item.permission || hasPermission(item.permission));
@@ -129,7 +130,7 @@ export function AppShell({ variant }: { variant: 'super' | 'company' }) {
 
   return (
     <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', bgcolor: 'background.default' }}>
-      <AppBar position="fixed" color="inherit" elevation={0} sx={{ borderBottom: '1px solid #E6EAF2', width: { md: `calc(100% - ${drawerWidth}px)` }, ml: { md: `${drawerWidth}px` } }}>
+      <AppBar position="fixed" color="inherit" elevation={0} className="no-print" sx={{ borderBottom: '1px solid #E6EAF2', width: { md: `calc(100% - ${drawerWidth}px)` }, ml: { md: `${drawerWidth}px` } }}>
         <Toolbar>
           {compact ? (
             <IconButton onClick={() => setOpen(true)} sx={{ mr: 1 }}>
@@ -156,7 +157,7 @@ export function AppShell({ variant }: { variant: 'super' | 'company' }) {
           </Menu>
         </Toolbar>
       </AppBar>
-      <Box component="nav" sx={{ width: { md: drawerWidth }, flexShrink: 0 }}>
+      <Box component="nav" className="no-print" sx={{ width: { md: drawerWidth }, flexShrink: 0 }}>
         <Drawer
           variant={compact ? 'temporary' : 'permanent'}
           open={compact ? open : true}
@@ -184,6 +185,12 @@ export function AppShell({ variant }: { variant: 'super' | 'company' }) {
           bgcolor: 'background.default',
           p: { xs: 2, md: 4 },
           pt: { xs: 10, md: 12 },
+          '@media print': {
+            p: 0,
+            pt: 0,
+            height: 'auto',
+            overflow: 'visible',
+          },
         }}
       >
         <Outlet />

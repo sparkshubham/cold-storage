@@ -25,6 +25,12 @@ export const theme = createTheme({
         html: { height: '100%' },
         body: { height: '100%', margin: 0 },
         '#root': { minHeight: '100%', height: '100%' },
+        '@media print': {
+          html: { height: 'auto' },
+          body: { height: 'auto', background: '#fff' },
+          '#root': { height: 'auto' },
+          '.no-print': { display: 'none !important' },
+        },
       },
     },
     MuiButton: {

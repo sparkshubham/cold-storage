@@ -26,6 +26,8 @@ import {
   UnitsPage,
 } from './pages/MasterPages';
 import { InventoryPage, StockLedgerPage, StockMovementPage } from './pages/InventoryPages';
+import { MovementDetailPage } from './pages/MovementDetailPage';
+import { InvoiceDetailPage, InvoicesPage } from './pages/InvoicePages';
 
 function Guest({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -78,7 +80,11 @@ export default function App() {
         <Route path="locations" element={<LocationsPage />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="inwards" element={<StockMovementPage kind="inward" />} />
+        <Route path="inwards/:id" element={<MovementDetailPage kind="inward" />} />
         <Route path="outwards" element={<StockMovementPage kind="outward" />} />
+        <Route path="outwards/:id" element={<MovementDetailPage kind="outward" />} />
+        <Route path="invoices" element={<InvoicesPage />} />
+        <Route path="invoices/:id" element={<InvoiceDetailPage />} />
         <Route path="stock-ledger" element={<StockLedgerPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
