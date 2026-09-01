@@ -6,6 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Alert, Button, MenuItem, Paper, Stack, TextField } from '@mui/material';
 import { createCompany, getCompany, updateCompany } from '../api/companies';
 import { listPlans } from '../api/saas';
+import { BusyButton, PageSpinner } from '../components/Loading';
 import { PageHeader } from '../components/PageHeader';
 import { apiErrorMessage, companyCreateSchema, companyUpdateSchema } from '../validation/schemas';
 
@@ -58,7 +59,7 @@ export function CompanyFormPage() {
     },
   });
   const { data: plans } = useQuery({ queryKey: ['plans'], queryFn: () => listPlans({ limit: 50 }) });
-  const { data: existing } = useQuery({
+  const { data: existing, isPending: loadingCompany } = useQuery({
     queryKey: ['company', id],
     queryFn: () => getCompany(id!),
     enabled: isEdit,
@@ -99,6 +100,10 @@ export function CompanyFormPage() {
     onSuccess: () => navigate('/super-admin/companies'),
   });
 
+  if (isEdit && loadingCompany && !existing) {
+    return <PageSpinner />;
+  }
+
   return (
     <>
       <PageHeader title={isEdit ? 'Edit company' : 'Create company'} subtitle="Tenant profile, subscription plan, and first company admin" />
@@ -138,7 +143,7 @@ export function CompanyFormPage() {
             </Stack>
           ) : null}
           <Stack direction="row" gap={2}>
-            <Button type="submit" variant="contained" disabled={mutation.isPending}>{mutation.isPending ? 'Saving…' : 'Save'}</Button>
+            <BusyButton type="submit" variant="contained" loading={mutation.isPending}>{mutation.isPending ? 'Saving…' : 'Save'}</BusyButton>
             <Button onClick={() => navigate('/super-admin/companies')}>Cancel</Button>
           </Stack>
         </Stack>

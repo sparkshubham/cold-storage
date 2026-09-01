@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { trackApiLoading } from './loading';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000/api/v1';
 
@@ -24,13 +25,20 @@ export function clearTokens() {
   localStorage.removeItem(REFRESH_KEY);
 }
 
-api.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+api.interceptors.request.use(
+  (config) => {
+    trackApiLoading(1);
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    trackApiLoading(-1);
+    return Promise.reject(error);
+  },
+);
 
 let refreshing: Promise<string | null> | null = null;
 
@@ -44,8 +52,12 @@ async function refreshAccessToken() {
 }
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    trackApiLoading(-1);
+    return response;
+  },
   async (error: AxiosError) => {
+    trackApiLoading(-1);
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     if (error.response?.status === 401 && original && !original._retry && !original.url?.includes('/auth/login')) {
       original._retry = true;

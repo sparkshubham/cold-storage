@@ -1,13 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, Grid, Typography } from '@mui/material';
 import { getCompanyDashboard } from '../api/dashboard';
+import { PageSpinner } from '../components/Loading';
 import { PageHeader } from '../components/PageHeader';
 import { useAuth } from '../context/AuthContext';
 
 export function CompanyDashboardPage() {
   const { user } = useAuth();
-  const { data } = useQuery({ queryKey: ['company-dashboard'], queryFn: getCompanyDashboard });
+  const { data, isPending } = useQuery({ queryKey: ['company-dashboard'], queryFn: getCompanyDashboard });
   const stats = data ?? {};
+
+  if (isPending) return <PageSpinner />;
 
   return (
     <>

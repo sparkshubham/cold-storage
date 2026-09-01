@@ -1,23 +1,33 @@
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, Grid, Typography } from '@mui/material';
+import { Button, Card, CardContent, Grid, Stack, Typography } from '@mui/material';
 import { getCompany } from '../api/companies';
+import { PageSpinner } from '../components/Loading';
 import { PageHeader, StatusChip } from '../components/PageHeader';
 
 export function CompanyDetailPage() {
   const { id = '' } = useParams();
-  const { data } = useQuery({ queryKey: ['company', id], queryFn: () => getCompany(id), enabled: Boolean(id) });
+  const navigate = useNavigate();
+  const { data, isError, isPending } = useQuery({ queryKey: ['company', id], queryFn: () => getCompany(id), enabled: Boolean(id) });
   const company = data?.company;
 
-  if (!company) {
-    return <Typography>Loading company…</Typography>;
-  }
+  if (isError) return <Typography color="error">This company was not found.</Typography>;
+  if (isPending || !company) return <PageSpinner />;
 
   const plan = typeof company.planId === 'object' ? company.planId : null;
 
   return (
     <>
-      <PageHeader title={company.name} subtitle={company.legalName || company.email} actions={<StatusChip value={company.status} />} />
+      <PageHeader
+        title={company.name}
+        subtitle={company.legalName || company.email}
+        actions={
+          <Stack direction="row" gap={1} alignItems="center">
+            <StatusChip value={company.status} />
+            <Button variant="contained" onClick={() => navigate(`/super-admin/companies/${company._id}/edit`)}>Edit</Button>
+          </Stack>
+        }
+      />
       <Grid container spacing={2}>
         {[
           ['Owner', company.ownerName],

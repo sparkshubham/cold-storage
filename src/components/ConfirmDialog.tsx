@@ -1,5 +1,6 @@
 import {
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -35,6 +36,7 @@ export function ConfirmDialog({
       <DialogActions sx={{ p: 2 }}>
         <Button onClick={onClose}>Cancel</Button>
         <Button variant="contained" color="error" onClick={onConfirm} disabled={loading}>
+          {loading ? <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} /> : null}
           {confirmLabel}
         </Button>
       </DialogActions>

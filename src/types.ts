@@ -79,7 +79,7 @@ export interface AppUser {
   status: string;
   lastLoginAt?: string | null;
   companyId?: { _id: string; name: string } | string | null;
-  roleId?: { name: string; code: string } | string;
+  roleId?: { _id: string; name: string; code: string } | string;
 }
 
 export interface AuditLog {

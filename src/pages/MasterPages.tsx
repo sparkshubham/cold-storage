@@ -18,6 +18,7 @@ export function CustomersPage() {
       endpoint="/customers"
       queryKey="customers"
       createPermission="customer.create"
+      updatePermission="customer.update"
       deletePermission="customer.delete"
       schema={customerSchema}
       columns={[
@@ -49,6 +50,7 @@ export function SuppliersPage() {
       endpoint="/suppliers"
       queryKey="suppliers"
       createPermission="supplier.create"
+      updatePermission="supplier.update"
       deletePermission="supplier.delete"
       schema={supplierSchema}
       columns={[
@@ -77,6 +79,7 @@ export function CategoriesPage() {
       endpoint="/categories"
       queryKey="categories"
       createPermission="category.create"
+      updatePermission="category.update"
       deletePermission="category.delete"
       schema={categorySchema}
       columns={[
@@ -100,6 +103,7 @@ export function UnitsPage() {
       endpoint="/units"
       queryKey="units"
       createPermission="unit.create"
+      updatePermission="unit.update"
       deletePermission="unit.delete"
       schema={unitSchema}
       columns={[
@@ -123,6 +127,7 @@ export function ProductsPage() {
       endpoint="/products"
       queryKey="products"
       createPermission="product.create"
+      updatePermission="product.update"
       deletePermission="product.delete"
       schema={productSchema}
       columns={[
@@ -152,6 +157,7 @@ export function ChambersPage() {
       endpoint="/chambers"
       queryKey="chambers"
       createPermission="chamber.create"
+      updatePermission="chamber.update"
       deletePermission="chamber.delete"
       schema={chamberSchema}
       columns={[
@@ -182,6 +188,7 @@ export function RacksPage() {
       endpoint="/racks"
       queryKey="racks"
       createPermission="rack.create"
+      updatePermission="rack.update"
       deletePermission="rack.delete"
       schema={rackSchema}
       columns={[
@@ -210,6 +217,7 @@ export function LocationsPage() {
       endpoint="/locations"
       queryKey="locations"
       createPermission="location.create"
+      updatePermission="location.update"
       deletePermission="location.delete"
       schema={locationSchema}
       columns={[

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, Grid, Typography } from '@mui/material';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { getSuperAdminDashboard } from '../api/dashboard';
+import { PageSpinner } from '../components/Loading';
 import { PageHeader } from '../components/PageHeader';
 
 function Stat({ label, value }: { label: string; value: string | number }) {
@@ -16,9 +17,11 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 }
 
 export function SuperDashboardPage() {
-  const { data } = useQuery({ queryKey: ['super-dashboard'], queryFn: getSuperAdminDashboard });
+  const { data, isPending } = useQuery({ queryKey: ['super-dashboard'], queryFn: getSuperAdminDashboard });
   const stats = data ?? {};
   const growth = (stats.charts as { companyGrowth?: Array<{ label: string; value: number }> } | undefined)?.companyGrowth ?? [];
+
+  if (isPending) return <PageSpinner />;
 
   return (
     <>

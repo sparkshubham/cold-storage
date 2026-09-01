@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -13,12 +13,15 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { activateCompany, deleteCompany, listCompanies, suspendCompany } from '../api/companies';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ListSearch, TablePager } from '../components/ListControls';
+import { TableLoading } from '../components/Loading';
 import { PageHeader, StatusChip } from '../components/PageHeader';
 import { usePagedList } from '../hooks/usePagedList';
 import type { Company } from '../types';
@@ -63,36 +66,43 @@ export function CompaniesPage() {
         </TextField>
       </Stack>
       <Paper>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Company</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Capacity</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {list.rows.map((company) => (
-              <TableRow key={company._id} hover>
-                <TableCell>{company.name}</TableCell>
-                <TableCell>{company.email}</TableCell>
-                <TableCell>{company.storageCapacity} {company.capacityUnit}</TableCell>
-                <TableCell><StatusChip value={company.status} /></TableCell>
-                <TableCell align="right">
-                  <IconButton onClick={() => navigate(`/super-admin/companies/${company._id}`)}><VisibilityIcon /></IconButton>
-                  {company.status === 'suspended' ? (
-                    <Button size="small" onClick={() => activate.mutate(company._id)}>Activate</Button>
-                  ) : (
-                    <Button size="small" onClick={() => suspend.mutate(company._id)}>Suspend</Button>
-                  )}
-                  <Button size="small" color="error" onClick={() => setTarget(company)}>Delete</Button>
-                </TableCell>
+        <TableLoading loading={list.isFetching}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Company</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Capacity</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {!list.isFetching && list.rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5}><Typography color="text.secondary">No companies yet.</Typography></TableCell>
+                </TableRow>
+              ) : list.rows.map((company) => (
+                <TableRow key={company._id} hover>
+                  <TableCell>{company.name}</TableCell>
+                  <TableCell>{company.email}</TableCell>
+                  <TableCell>{company.storageCapacity} {company.capacityUnit}</TableCell>
+                  <TableCell><StatusChip value={company.status} /></TableCell>
+                  <TableCell align="right">
+                    <IconButton onClick={() => navigate(`/super-admin/companies/${company._id}`)}><VisibilityIcon /></IconButton>
+                    <IconButton onClick={() => navigate(`/super-admin/companies/${company._id}/edit`)}><EditIcon /></IconButton>
+                    {company.status === 'suspended' ? (
+                      <Button size="small" onClick={() => activate.mutate(company._id)}>Activate</Button>
+                    ) : (
+                      <Button size="small" onClick={() => suspend.mutate(company._id)}>Suspend</Button>
+                    )}
+                    <Button size="small" color="error" onClick={() => setTarget(company)}>Delete</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableLoading>
         <TablePager total={list.total} page={list.page} rowsPerPage={list.rowsPerPage} onPageChange={list.onPageChange} onRowsPerPageChange={list.onRowsPerPageChange} />
       </Paper>
       <ConfirmDialog
@@ -100,6 +110,7 @@ export function CompaniesPage() {
         title="Delete company"
         message={`Soft-delete ${target?.name ?? ''}? Historical records stay in the database.`}
         confirmLabel="Delete"
+        loading={remove.isPending}
         onClose={() => setTarget(null)}
         onConfirm={() => target && remove.mutate(target._id)}
       />

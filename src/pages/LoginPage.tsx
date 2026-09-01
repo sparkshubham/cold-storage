@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { Alert, Box, Button, Link, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Link, Paper, Stack, TextField, Typography } from '@mui/material';
 import AcUnitIcon from '@mui/icons-material/AcUnit';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import { BusyButton } from '../components/Loading';
 import { loginSchema, validateForm } from '../validation/schemas';
 
 export function LoginPage() {
@@ -67,9 +68,9 @@ export function LoginPage() {
             helperText={errors.password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button type="submit" fullWidth variant="contained" size="large" disabled={loading}>
+          <BusyButton type="submit" fullWidth variant="contained" size="large" loading={loading}>
             {loading ? 'Signing in…' : 'Sign in'}
-          </Button>
+          </BusyButton>
         </Box>
         <Typography variant="body2" mt={2}>
           <Link component={RouterLink} to="/forgot-password">Forgot password?</Link>

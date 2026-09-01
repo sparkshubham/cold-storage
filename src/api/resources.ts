@@ -25,3 +25,8 @@ export async function deleteResource(path: string, id: string) {
   const { data } = await api.delete(`${path}/${id}`);
   return data;
 }
+
+export async function cancelResource<T = Record<string, unknown>>(path: string, id: string) {
+  const { data } = await api.post<ApiSuccess<T>>(`${path}/${id}/cancel`);
+  return data;
+}

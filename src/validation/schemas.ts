@@ -141,6 +141,15 @@ export const inwardOutwardSchema = movementBase.extend({
   quantity: z.coerce.number().positive('Quantity must be greater than 0'),
 });
 
+export const movementMetaSchema = z.object({
+  vehicleNumber: optionalText,
+  notes: optionalText,
+});
+
+export const invoiceNotesSchema = z.object({
+  notes: optionalText,
+});
+
 export const billRatesSchema = z.object({
   storageRatePerUnitPerDay: z.coerce.number().min(0, 'Rate cannot be negative'),
   inwardHandlingRate: z.coerce.number().min(0, 'Rate cannot be negative'),
@@ -155,6 +164,10 @@ export const userCreateSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   roleId: z.string().min(1, 'Select a role'),
   companyId: z.string().optional().default(''),
+});
+
+export const userUpdateSchema = userCreateSchema.extend({
+  password: z.union([z.literal(''), z.string().min(8, 'Password must be at least 8 characters')]).optional(),
 });
 
 export const planSchema = z.object({

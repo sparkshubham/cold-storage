@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Alert, Box, Button, Link, Paper, TextField, Typography } from '@mui/material';
+import { Alert, Box, Link, Paper, TextField, Typography } from '@mui/material';
 import { forgotPassword } from '../api/auth';
 import axios from 'axios';
+import { BusyButton } from '../components/Loading';
 import { forgotPasswordSchema, validateForm } from '../validation/schemas';
 
 export function ForgotPasswordPage() {
@@ -11,6 +12,8 @@ export function ForgotPasswordPage() {
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [fieldError, setFieldError] = useState('');
+
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -21,12 +24,15 @@ export function ForgotPasswordPage() {
       return;
     }
     setFieldError('');
+    setLoading(true);
     try {
       const response = await forgotPassword(result.data.email);
       setMessage(response.message);
       setToken(response.data.resetToken ?? '');
     } catch (err) {
       setError(axios.isAxiosError(err) ? String(err.response?.data?.message ?? 'Request failed') : 'Request failed');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -49,7 +55,7 @@ export function ForgotPasswordPage() {
             helperText={fieldError}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <Button type="submit" variant="contained" fullWidth>Send reset link</Button>
+          <BusyButton type="submit" variant="contained" fullWidth loading={loading}>Send reset link</BusyButton>
         </Box>
         <Link component={RouterLink} to="/login" sx={{ display: 'inline-block', mt: 2 }}>Back to login</Link>
       </Paper>

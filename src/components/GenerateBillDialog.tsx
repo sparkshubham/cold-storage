@@ -16,6 +16,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { BusyButton } from './Loading';
 import { createResource, getResource } from '../api/resources';
 import { billRatesSchema, validateForm } from '../validation/schemas';
 
@@ -193,6 +194,9 @@ export function GenerateBillDialog({
         <Button variant="outlined" onClick={() => applyRates()} sx={{ mb: 2 }}>
           Recalculate
         </Button>
+        {preview.isFetching && !draft ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Calculating bill…</Typography>
+        ) : null}
         {draft?.alreadyBilled ? (
           <Typography color="warning.main" sx={{ mb: 2 }}>
             Bill {draft.existingInvoiceNumber} already exists for this slip.
@@ -256,9 +260,9 @@ export function GenerateBillDialog({
             Open bill
           </Button>
         ) : (
-          <Button variant="contained" onClick={() => applyRates() && generate.mutate()} disabled={generate.isPending || !draft}>
+          <BusyButton variant="contained" loading={generate.isPending} onClick={() => applyRates() && generate.mutate()} disabled={!draft}>
             Generate bill
-          </Button>
+          </BusyButton>
         )}
       </DialogActions>
     </Dialog>

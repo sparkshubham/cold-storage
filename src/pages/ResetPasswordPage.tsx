@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
-import { Alert, Box, Button, Link, Paper, TextField, Typography } from '@mui/material';
+import { Alert, Box, Link, Paper, TextField, Typography } from '@mui/material';
 import { resetPassword } from '../api/auth';
 import axios from 'axios';
+import { BusyButton } from '../components/Loading';
 import { resetPasswordSchema, validateForm } from '../validation/schemas';
 
 export function ResetPasswordPage() {
@@ -13,6 +14,8 @@ export function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const [loading, setLoading] = useState(false);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
@@ -22,11 +25,14 @@ export function ResetPasswordPage() {
       return;
     }
     setErrors({});
+    setLoading(true);
     try {
       const response = await resetPassword(result.data.token, result.data.password);
       setMessage(response.message ?? 'Password updated');
     } catch (err) {
       setError(axios.isAxiosError(err) ? String(err.response?.data?.message ?? 'Reset failed') : 'Reset failed');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -56,7 +62,7 @@ export function ResetPasswordPage() {
             helperText={errors.password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button type="submit" variant="contained" fullWidth>Update password</Button>
+          <BusyButton type="submit" variant="contained" fullWidth loading={loading}>Update password</BusyButton>
         </Box>
         <Link component={RouterLink} to="/login" sx={{ display: 'inline-block', mt: 2 }}>Back to login</Link>
       </Paper>
